@@ -6,7 +6,7 @@
 <title>Chikungunya RIDE-DF 2026 · SE 25 · Sala de Situação</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="chart.umd.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -77,25 +77,33 @@ tr:last-child td{border:none}tr:hover td{background:var(--surface2)}
 .dot-btn.on{background:var(--azul);width:18px;border-radius:3px}
 .pause-btn{font-size:11px;color:var(--muted);background:none;border:1px solid var(--border-strong);padding:4px 10px;border-radius:var(--radius);cursor:pointer;font-family:'Lato',sans-serif}
 .pause-btn:hover{color:var(--azul);border-color:var(--azul)}
+.loading{position:fixed;inset:0;z-index:9999;background:rgba(247,247,245,.96);display:flex;align-items:center;justify-content:center;padding:24px;transition:opacity .25s ease}
+.loading.oculto{opacity:0;pointer-events:none}
+.loading-box{width:min(520px,92vw);background:#fff;border:1px solid var(--border-strong);border-radius:10px;padding:26px;box-shadow:0 12px 35px rgba(38,52,108,.16);text-align:center}
+.spinner{width:34px;height:34px;border:4px solid rgba(38,52,108,.14);border-top-color:var(--azul);border-radius:50%;margin:0 auto 14px;animation:girar .8s linear infinite}
+.loading h2{font-size:18px;color:var(--azul);margin-bottom:7px}.loading p{font-size:13px;color:var(--muted);line-height:1.45}
+.loading.erro .spinner{display:none}.loading.erro .loading-box{border-top:4px solid var(--red)}.loading.erro h2{color:var(--red)}
+@keyframes girar{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
+<div class="loading" id="loading"><div class="loading-box"><div class="spinner"></div><h2 id="loadingTitulo">Atualizando o painel</h2><p id="loadingMsg">Buscando o CSV mais recente no GitHub e recalculando os indicadores.</p></div></div>
 <div class="stage">
 <div class="progress-bar"><div class="progress-fill" id="pbar"></div></div>
 
 <div class="header">
   <div class="header-left">
     <div class="inst">Sala de Situação de Saúde · FS-UnB · HUB/UnB-Ebserh · Residência Multiprofissional em Vigilância em Saúde</div>
-    <h1>Chikungunya — <span>RIDE-DF</span> &nbsp;·&nbsp; 2026 &nbsp;·&nbsp; SE 01–25</h1>
+    <h1 id="tituloPrincipal">Chikungunya — <span>RIDE-DF</span></h1>
   </div>
   <div class="header-right">
-    <div class="kpi-mini"><div class="v">497</div><div class="l">Notificações</div></div>
+    <div class="kpi-mini"><div class="v" id="miniTotal">—</div><div class="l">Notificações</div></div>
     <div class="sep"></div>
-    <div class="kpi-mini"><div class="v gold">258</div><div class="l">Confirmados</div></div>
+    <div class="kpi-mini"><div class="v gold" id="miniConf">—</div><div class="l">Confirmados</div></div>
     <div class="sep"></div>
-    <div class="kpi-mini"><div class="v gold">64.2%</div><div class="l">Tx Positividade</div></div>
+    <div class="kpi-mini"><div class="v gold" id="miniTx">—</div><div class="l">Tx Positividade</div></div>
     <div class="sep"></div>
-    <div class="kpi-mini"><div class="v">95</div><div class="l">Em Investigação</div></div>
+    <div class="kpi-mini"><div class="v" id="miniInv">—</div><div class="l">Em Investigação</div></div>
     <div class="sep"></div>
     <div class="slide-counter" id="slideCounter">1 / 6</div>
   </div>
@@ -104,12 +112,12 @@ tr:last-child td{border:none}tr:hover td{background:var(--surface2)}
 <div class="slides-wrap">
 
 <div class="slide active" id="s0">
-  <div class="slide-title">Indicadores gerais — SE 01–25/2026</div>
+  <div class="slide-title" id="tituloIndicadores">Indicadores gerais</div>
   <div class="g4">
-    <div class="kpi-card azul"><div class="val">258</div><div class="lbl">Casos confirmados</div><div class="sub">de 402 encerrados</div></div>
-    <div class="kpi-card gold"><div class="val">95</div><div class="lbl">Em investigação</div><div class="sub">sem encerramento registrado</div></div>
-    <div class="kpi-card green"><div class="val">64.2%</div><div class="lbl">Taxa de positividade</div><div class="sub">conf. / (conf.+neg.) × 100</div></div>
-    <div class="kpi-card red"><div class="val">1</div><div class="lbl">Óbito pelo agravo</div><div class="sub">Hospitaliz.: 57 (11.5%)</div></div>
+    <div class="kpi-card azul"><div class="val" id="kpiConf">—</div><div class="lbl">Casos confirmados</div><div class="sub" id="kpiConfSub">—</div></div>
+    <div class="kpi-card gold"><div class="val" id="kpiInv">—</div><div class="lbl">Em investigação</div><div class="sub">sem classificação final registrada</div></div>
+    <div class="kpi-card green"><div class="val" id="kpiTx">—</div><div class="lbl">Taxa de positividade</div><div class="sub">conf. / (conf.+neg.) × 100</div></div>
+    <div class="kpi-card red"><div class="val" id="kpiObito">—</div><div class="lbl">Óbito pelo agravo</div><div class="sub" id="kpiHospSub">—</div></div>
   </div>
   <div class="g2">
     <div class="chart-wrap"><div class="ctitle">Classificação final</div><canvas id="ch_classi"></canvas></div>
@@ -155,14 +163,14 @@ tr:last-child td{border:none}tr:hover td{background:var(--surface2)}
 
 <div class="slide" id="s5">
   <div class="slide-title">Tabela resumo por município — classificação, taxa de positividade e incidência</div>
-  <div class="alert">&#9888; Baixa taxa de positividade (&lt;25%): <strong>Luziânia</strong>, <strong>Unaí</strong> — investigar diagnóstico diferencial com outras arboviroses.</div>
+  <div class="alert" id="alertaBaixaPos"></div>
   <div class="tbl-wrap">
     <table>
       <thead><tr><th>Município</th><th>Total</th><th>Confirmados</th><th>Em investigação</th><th>Notif. negativas</th><th>Tx positividade</th><th>Incidência /100k¹</th></tr></thead>
       <tbody id="tblBody"></tbody>
     </table>
   </div>
-  <div style="font-size:10px;color:var(--muted);flex-shrink:0">¹ Incidência calculada sobre confirmados · Populações: IBGE 2025 · Fonte: SINAN Online 2026 · RIDE-DF: LC 94/1998 + LC 163/2018 · Gerado em: 04/07/2026 12:20</div>
+  <div id="fonteRodape" style="font-size:10px;color:var(--muted);flex-shrink:0"></div>
 </div>
 
 </div>
@@ -176,87 +184,343 @@ tr:last-child td{border:none}tr:hover td{background:var(--surface2)}
 </div>
 
 <script>
-const SEMS=["SE01", "SE02", "SE03", "SE04", "SE05", "SE06", "SE07", "SE08", "SE09", "SE10", "SE11", "SE12", "SE13", "SE14", "SE15", "SE16", "SE17", "SE18", "SE19", "SE20", "SE21", "SE22", "SE23", "SE24", "SE25"],CONF_SEM=[6, 7, 9, 3, 7, 2, 5, 11, 16, 5, 10, 11, 10, 8, 7, 11, 11, 25, 19, 22, 18, 4, 16, 10, 5],NEG_SEM=[8, 9, 14, 9, 5, 7, 6, 3, 3, 4, 6, 4, 3, 4, 5, 10, 5, 5, 5, 7, 7, 11, 2, 2, 0],
-      INV_SEM=[2, 2, 0, 1, 1, 1, 2, 2, 0, 7, 2, 5, 4, 6, 7, 3, 8, 5, 6, 5, 8, 2, 8, 5, 3],TXPOS=[42.9, 43.8, 39.1, 25.0, 58.3, 22.2, 45.5, 78.6, 84.2, 55.6, 62.5, 73.3, 76.9, 66.7, 58.3, 52.4, 68.8, 83.3, 79.2, 75.9, 72.0, 26.7, 88.9, 83.3, 100.0],MUNIS=[{"nome": "Distrito Federal", "total": 260, "conf": 137, "inv": 54, "neg": 69, "tx_pos": 66.5, "inc": 4.6, "curva_conf": [4, 5, 3, 1, 7, 0, 2, 7, 5, 4, 6, 8, 5, 7, 5, 2, 5, 10, 11, 13, 6, 3, 7, 8, 3], "curva_inv": [2, 2, 0, 1, 0, 1, 0, 1, 0, 3, 2, 3, 3, 4, 5, 1, 5, 2, 2, 3, 5, 2, 4, 0, 3]}, {"nome": "Novo Gama", "total": 75, "conf": 60, "inv": 11, "neg": 4, "tx_pos": 93.8, "inc": 46.2, "curva_conf": [0, 0, 1, 1, 0, 1, 1, 0, 10, 0, 2, 2, 4, 1, 2, 5, 2, 2, 1, 6, 9, 1, 6, 1, 2], "curva_inv": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 2, 2, 1, 0, 0, 2, 3, 0]}, {"nome": "Luziânia", "total": 29, "conf": 1, "inv": 4, "neg": 24, "tx_pos": 4.0, "inc": 0.5, "curva_conf": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0], "curva_inv": [0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0]}, {"nome": "Unaí", "total": 27, "conf": 1, "inv": 3, "neg": 23, "tx_pos": 4.2, "inc": 1.1, "curva_conf": [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "curva_inv": [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]}, {"nome": "Valparaíso de Goiás", "total": 25, "conf": 10, "inv": 9, "neg": 6, "tx_pos": 62.5, "inc": 5.4, "curva_conf": [0, 0, 0, 0, 0, 0, 1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 3, 0, 1, 0, 1, 0, 0], "curva_inv": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 1, 1, 0, 1, 2, 0, 0, 0, 1, 0, 0]}, {"nome": "Santo Antônio do Descoberto", "total": 18, "conf": 11, "inv": 3, "neg": 4, "tx_pos": 73.3, "inc": 12.0, "curva_conf": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 2, 1, 0, 0, 0, 0, 0], "curva_inv": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0]}, {"nome": "Goianésia", "total": 16, "conf": 16, "inv": 0, "neg": 0, "tx_pos": 100.0, "inc": 20.0, "curva_conf": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 1, 0, 0, 0, 3, 2, 4, 1, 1, 1, 0, 1, 0, 0], "curva_inv": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]}, {"nome": "Pirenópolis", "total": 11, "conf": 9, "inv": 0, "neg": 2, "tx_pos": 81.8, "inc": 32.1, "curva_conf": [0, 1, 4, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0], "curva_inv": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]}, {"nome": "Cidade Ocidental", "total": 9, "conf": 3, "inv": 1, "neg": 5, "tx_pos": 37.5, "inc": 2.7, "curva_conf": [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0], "curva_inv": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0]}, {"nome": "Cristalina", "total": 7, "conf": 3, "inv": 0, "neg": 4, "tx_pos": 42.9, "inc": 4.8, "curva_conf": [1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "curva_inv": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]}, {"nome": "Abadiânia", "total": 5, "conf": 0, "inv": 5, "neg": 0, "tx_pos": null, "inc": 0.0, "curva_conf": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "curva_inv": [0, 0, 0, 0, 0, 0, 1, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]}, {"nome": "Águas Lindas de Goiás", "total": 5, "conf": 2, "inv": 2, "neg": 1, "tx_pos": 66.7, "inc": 0.9, "curva_conf": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0], "curva_inv": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0]}, {"nome": "Formosa", "total": 4, "conf": 1, "inv": 2, "neg": 1, "tx_pos": 50.0, "inc": 0.8, "curva_conf": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "curva_inv": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0]}, {"nome": "Cabeceira Grande", "total": 3, "conf": 2, "inv": 0, "neg": 1, "tx_pos": 66.7, "inc": 29.4, "curva_conf": [0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "curva_inv": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]}, {"nome": "Barro Alto", "total": 1, "conf": 1, "inv": 0, "neg": 0, "tx_pos": 100.0, "inc": 7.1, "curva_conf": [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "curva_inv": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]}, {"nome": "Planaltina", "total": 1, "conf": 0, "inv": 1, "neg": 0, "tx_pos": null, "inc": 0.0, "curva_conf": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "curva_inv": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]}, {"nome": "Padre Bernardo", "total": 1, "conf": 1, "inv": 0, "neg": 0, "tx_pos": 100.0, "inc": 3.1, "curva_conf": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0], "curva_inv": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]}],
-      FAIXA_L=["<5a", "5-9a", "10-19a", "20-29a", "30-39a", "40-49a", "50-59a", "≥60a"],FAIXA_V=[42, 41, 63, 67, 58, 66, 82, 78],
-      RACA_L=["Parda", "Ignorado", "Branca", "Preta", "Amarela", "Indígena"],RACA_V=[257, 135, 74, 22, 7, 2],
-      SINAIS_L=["Febre", "Mialgia", "Cefaleia", "Artralgia", "Náusea", "Dor nas costas", "Vômito", "Exantema", "Artrite", "Conjuntivite"],SINAIS_V=[69.2, 63.8, 50.5, 35.6, 24.7, 23.1, 16.9, 12.5, 9.5, 2.4],
-      N_FEM=299,N_MAS=198,
-      N_CONF=258,N_INV=95,N_NEG=144,INTERVAL=15000;
+const CONFIG = {
+  anoPreferencial: String(new Date().getFullYear()),
+  csvDados: 'https://raw.githubusercontent.com/FEHALTENBURG1/dados_chikungunya/refs/heads/main/dados/chikungunya_ride.csv',
+  csvPopulacao: 'https://raw.githubusercontent.com/FEHALTENBURG1/dados_chikungunya/refs/heads/main/populacao_ride.csv',
+  intervaloSlides: 15000
+};
 
-const AZUL='#26346c',DOURADO='#ba9317',GREEN='#2e7d4f',RED='#b83232',GRAY='#c3c2b7';
-const gc='rgba(38,52,108,.07)',tc='#5a6380',tp='#1a2140';
+const AZUL='#26346c', DOURADO='#ba9317', GREEN='#2e7d4f', RED='#b83232', GRAY='#c3c2b7';
+const gc='rgba(38,52,108,.07)', tc='#5a6380', tp='#1a2140';
+const charts=[];
+let SEMS=[], MUNIS=[], INTERVAL=CONFIG.intervaloSlides;
 
-function txColor(tx){if(tx===null)return GRAY;if(tx>=75)return AZUL;if(tx>=50)return GREEN;if(tx>=25)return DOURADO;return RED;}
+function valor(v){ return String(v ?? '').trim(); }
+function numero(v){
+  const n = Number(String(v ?? '').replace(',', '.'));
+  return Number.isFinite(n) ? n : null;
+}
+function pct(n, d){ return d > 0 ? (100 * n / d) : null; }
+function fmtPct(v){ return v === null ? '—' : `${v.toFixed(1)}%`; }
+function fmtInt(v){ return Number(v || 0).toLocaleString('pt-BR'); }
+function txColor(tx){ if(tx===null)return GRAY; if(tx>=75)return AZUL; if(tx>=50)return GREEN; if(tx>=25)return DOURADO; return RED; }
+function escapeHtml(text){
+  return String(text ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+}
+function cacheBust(url){ return `${url}${url.includes('?') ? '&' : '?'}v=${Date.now()}`; }
 
-new Chart(document.getElementById('ch_classi'),{type:'doughnut',
-  data:{labels:['Confirmado','Em investigação','Notif. negativa'],datasets:[{data:[N_CONF,N_INV,N_NEG],backgroundColor:[AZUL,DOURADO,GRAY],borderWidth:2,borderColor:'#fff'}]},
-  options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{display:true,position:'right',labels:{color:tp,font:{size:11,family:'Lato',weight:'700'},boxWidth:12}},tooltip:{callbacks:{label:c=>` ${c.label}: ${c.raw}`}}}}
-});
-new Chart(document.getElementById('ch_idade'),{type:'bar',
-  data:{labels:FAIXA_L,datasets:[{data:FAIXA_V,backgroundColor:AZUL,borderRadius:3,borderSkipped:false}]},
-  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.raw} casos`}}},scales:{x:{ticks:{color:tc,font:{size:10}},grid:{display:false},border:{color:gc}},y:{ticks:{color:tc,font:{size:10}},grid:{color:gc},border:{display:false}}}}
-});
-new Chart(document.getElementById('ch_curva'),{type:'bar',
-  data:{labels:SEMS,datasets:[
-    {type:'bar', label:'Confirmados',           data:CONF_SEM,backgroundColor:AZUL,  stack:'s',borderRadius:0,borderSkipped:false,yAxisID:'y'},
-    {type:'bar', label:'Notificações negativas',data:NEG_SEM, backgroundColor:GRAY,  stack:'s',borderRadius:0,borderSkipped:false,yAxisID:'y'},
-    {type:'line',label:'Taxa de positividade (%)',data:TXPOS,borderColor:DOURADO,backgroundColor:'rgba(186,147,23,.08)',borderWidth:2.5,pointRadius:4,pointBackgroundColor:DOURADO,tension:.3,yAxisID:'y2',fill:false,spanGaps:true},
-  ]},
-  options:{responsive:true,maintainAspectRatio:false,
-    plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,callbacks:{label:c=>c.dataset.label==='Taxa de positividade (%)'?` Tx positividade: ${c.raw!==null?c.raw.toFixed(1)+'%':'—'}`:` ${c.dataset.label}: ${c.raw}`}}},
-    scales:{
-      x:{stacked:true,ticks:{color:tc,font:{size:10},autoSkip:false,maxRotation:45},grid:{display:false},border:{color:gc}},
-      y:{stacked:true,ticks:{color:tc,font:{size:10}},grid:{color:gc},border:{display:false},title:{display:true,text:'Casos',color:tc,font:{size:10}}},
-      y2:{position:'right',min:0,max:100,ticks:{color:DOURADO,font:{size:10},callback:v=>v+'%'},grid:{display:false},border:{display:false},title:{display:true,text:'Tx positividade',color:DOURADO,font:{size:10}}}
-    }
+async function baixarTexto(url){
+  const resposta = await fetch(cacheBust(url), {cache:'no-store'});
+  if(!resposta.ok) throw new Error(`HTTP ${resposta.status} ao acessar ${url}`);
+  return resposta.text();
+}
+
+function parseCsv(texto, origem){
+  const linhas=[];
+  let linha=[], campo='', entreAspas=false;
+  for(let i=0;i<texto.length;i++){
+    const ch=texto[i];
+    if(entreAspas){
+      if(ch==='"'){
+        if(texto[i+1]==='"'){ campo+='"'; i++; }
+        else entreAspas=false;
+      }else campo+=ch;
+    }else if(ch==='"') entreAspas=true;
+    else if(ch===','){ linha.push(campo); campo=''; }
+    else if(ch==='\n'){
+      linha.push(campo.replace(/\r$/, '')); campo='';
+      if(linha.some(v => v.trim()!=='')) linhas.push(linha);
+      linha=[];
+    }else campo+=ch;
   }
-});
-const muniTx=MUNIS.filter(m=>m.tx_pos!==null).sort((a,b)=>b.tx_pos-a.tx_pos);
-new Chart(document.getElementById('ch_txpos'),{type:'bar',
-  data:{labels:muniTx.map(m=>m.nome),datasets:[{data:muniTx.map(m=>m.tx_pos),backgroundColor:muniTx.map(m=>txColor(m.tx_pos)),borderRadius:3,borderSkipped:false}]},
-  options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.raw.toFixed(1)}%`}}},scales:{x:{min:0,max:100,ticks:{color:tc,font:{size:10},callback:v=>v+'%'},grid:{color:gc},border:{display:false}},y:{ticks:{color:tp,font:{size:10}},grid:{display:false},border:{color:gc}}}}
-});
-const muniInc=MUNIS.filter(m=>m.inc!==null).sort((a,b)=>b.inc-a.inc);
-new Chart(document.getElementById('ch_inc'),{type:'bar',
-  data:{labels:muniInc.map(m=>m.nome),datasets:[{data:muniInc.map(m=>m.inc),backgroundColor:muniInc.map(m=>txColor(m.tx_pos)),borderRadius:3,borderSkipped:false}]},
-  options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.raw.toFixed(1)}/100k`}}},scales:{x:{ticks:{color:tc,font:{size:10},callback:v=>v+'/100k'},grid:{color:gc},border:{display:false}},y:{ticks:{color:tp,font:{size:10}},grid:{display:false},border:{color:gc}}}}
-});
-const muniGrid=document.getElementById('muniGrid');
-MUNIS.slice(0,6).forEach((m,i)=>{
-  const div=document.createElement('div');div.className='muni-card';const cid='mc'+i;
-  const txStr=m.tx_pos!==null?`Tx pos: ${m.tx_pos.toFixed(1)}%`:'Em investigação';
-  div.innerHTML=`<h3>${m.nome}</h3><div class="meta">${m.total} notif. · ${m.conf} conf. · ${txStr}</div><div class="chart-h"><canvas id="${cid}"></canvas></div>`;
-  muniGrid.appendChild(div);
-  new Chart(document.getElementById(cid),{type:'bar',
-    data:{labels:SEMS,datasets:[{label:'Confirmados',data:m.curva_conf,backgroundColor:AZUL,stack:'s',borderRadius:0,borderSkipped:false},{label:'Em investigação',data:m.curva_inv,backgroundColor:DOURADO,stack:'s',borderRadius:0,borderSkipped:false}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,callbacks:{label:c=>` ${c.dataset.label}: ${c.raw}`}}},scales:{x:{stacked:true,ticks:{color:tc,font:{size:8},autoSkip:true,maxRotation:0},grid:{display:false},border:{color:gc}},y:{stacked:true,ticks:{color:tc,font:{size:8}},grid:{color:gc},border:{display:false}}}}
+  if(campo.length || linha.length){
+    linha.push(campo.replace(/\r$/, ''));
+    if(linha.some(v => v.trim()!=='')) linhas.push(linha);
+  }
+  if(!linhas.length) throw new Error(`O CSV ${origem} está vazio.`);
+  const cabecalho=linhas.shift().map((h,i) => (i===0 ? h.replace(/^\uFEFF/, '') : h).trim());
+  if(!cabecalho.length) throw new Error(`O CSV ${origem} não possui cabeçalho.`);
+  return linhas.map(valores => Object.fromEntries(cabecalho.map((h,i) => [h, valores[i] ?? ''])));
+}
+
+function obterAno(rows){
+  const anos = [...new Set(rows.map(r => valor(r.ANO_EPI)).filter(a => /^\d{4}$/.test(a)))].sort();
+  if(anos.includes(CONFIG.anoPreferencial)) return CONFIG.anoPreferencial;
+  if(!anos.length) throw new Error('A coluna ANO_EPI não contém anos válidos.');
+  return anos[anos.length - 1];
+}
+
+function idadeEmAnos(codigo){
+  const s = valor(codigo).replace(/\.0$/, '').padStart(4, '0');
+  if(!/^\d{4}$/.test(s)) return null;
+  const unidade = Number(s[0]);
+  const quantidade = Number(s.slice(1));
+  if(unidade === 4) return quantidade;
+  if([1,2,3].includes(unidade)) return 0;
+  return null;
+}
+
+function faixaEtaria(idade){
+  if(idade === null) return null;
+  if(idade < 5) return '<5a';
+  if(idade < 10) return '5-9a';
+  if(idade < 20) return '10-19a';
+  if(idade < 30) return '20-29a';
+  if(idade < 40) return '30-39a';
+  if(idade < 50) return '40-49a';
+  if(idade < 60) return '50-59a';
+  return '≥60a';
+}
+
+function nomeMunicipio(row){
+  const nome = valor(row.MUN_RESI_NOME);
+  if(nome === 'Brasília' || valor(row.MUN_RESI_UF) === 'DF') return 'Distrito Federal';
+  return nome || 'Residência ignorada';
+}
+
+function criarPopulacoes(rows){
+  const mapa = new Map();
+  rows.forEach(r => {
+    let nome = valor(r.nome);
+    if(nome === 'Brasília' || valor(r.uf) === 'DF') nome = 'Distrito Federal';
+    const pop = numero(r.populacao);
+    if(nome && pop !== null) mapa.set(nome, pop);
   });
-});
-const pieOpts={responsive:true,maintainAspectRatio:false,cutout:'55%',plugins:{legend:{display:true,position:'bottom',labels:{color:tp,font:{size:10,family:'Lato'},boxWidth:10}},tooltip:{callbacks:{label:c=>` ${c.label}: ${c.raw}`}}}};
-new Chart(document.getElementById('ch_sinais'),{type:'bar',
-  data:{labels:SINAIS_L,datasets:[{data:SINAIS_V,backgroundColor:AZUL,borderRadius:3,borderSkipped:false}]},
-  options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.raw}%`}}},scales:{x:{max:100,ticks:{color:tc,font:{size:9},callback:v=>v+'%'},grid:{color:gc},border:{display:false}},y:{ticks:{color:tp,font:{size:10}},grid:{display:false},border:{color:gc}}}}
-});
-new Chart(document.getElementById('ch_sexo'),{type:'doughnut',data:{labels:['Feminino','Masculino'],datasets:[{data:[N_FEM,N_MAS],backgroundColor:[AZUL,DOURADO],borderWidth:2,borderColor:'#fff'}]},options:pieOpts});
-new Chart(document.getElementById('ch_raca'),{type:'doughnut',data:{labels:RACA_L,datasets:[{data:RACA_V,backgroundColor:[AZUL,GRAY,GREEN,DOURADO,'#6b5b9e',RED].slice(0,RACA_L.length),borderWidth:2,borderColor:'#fff'}]},options:pieOpts});
-const tbody=document.getElementById('tblBody');
-MUNIS.forEach(m=>{
-  const txStr=m.tx_pos!==null?m.tx_pos.toFixed(1)+'%':'—',incStr=m.inc!==null?m.inc.toFixed(1):'—';
-  let txCls='b-gray';if(m.tx_pos!==null){if(m.tx_pos>=75)txCls='b-azul';else if(m.tx_pos>=50)txCls='b-green';else if(m.tx_pos>=25)txCls='b-gold';else txCls='b-red';}
-  tbody.innerHTML+=`<tr><td><strong>${m.nome}</strong></td><td>${m.total}</td><td><span class="badge b-azul">${m.conf}</span></td><td><span class="badge b-gold">${m.inv}</span></td><td>${m.neg}</td><td><span class="badge ${txCls}">${txStr}</span></td><td>${incStr}</td></tr>`;
-});
-const TOTAL=6;let cur=0,paused=false,animFrame=null;
-const pbar=document.getElementById('pbar'),pauseBtn=document.getElementById('pauseBtn'),counter=document.getElementById('slideCounter'),dotsEl=document.getElementById('dots');
-for(let i=0;i<TOTAL;i++){const b=document.createElement('button');b.className='dot-btn'+(i===0?' on':'');b.onclick=()=>goTo(i);b.setAttribute('aria-label','Slide '+(i+1));dotsEl.appendChild(b);}
+  return mapa;
+}
+
+function agregar(rows, populacoes){
+  const ano = obterAno(rows);
+  const dados = rows.filter(r => valor(r.ANO_EPI) === ano);
+  if(!dados.length) throw new Error(`Não há registros para ${ano}.`);
+
+  const semanasValidas = dados.map(r => numero(r.SE)).filter(s => s !== null && s >= 1 && s <= 53);
+  const maxSE = Math.max(...semanasValidas);
+  SEMS = Array.from({length:maxSE}, (_,i) => `SE${String(i+1).padStart(2,'0')}`);
+
+  const conf = dados.filter(r => valor(r.CLASSI_FIN) === '13');
+  const neg  = dados.filter(r => valor(r.CLASSI_FIN) === '5');
+  const inv  = dados.filter(r => !['13','5'].includes(valor(r.CLASSI_FIN)));
+  const encerrados = conf.length + neg.length;
+  const txPos = pct(conf.length, encerrados);
+  const hosp = dados.filter(r => valor(r.HOSPITALIZ) === '1').length;
+  const obitos = dados.filter(r => valor(r.EVOLUCAO) === '2').length;
+
+  const porSemana = Array.from({length:maxSE}, () => ({conf:0,neg:0,inv:0}));
+  dados.forEach(r => {
+    const se = numero(r.SE);
+    if(se === null || se < 1 || se > maxSE) return;
+    const c = valor(r.CLASSI_FIN);
+    if(c === '13') porSemana[se-1].conf++;
+    else if(c === '5') porSemana[se-1].neg++;
+    else porSemana[se-1].inv++;
+  });
+  const CONF_SEM = porSemana.map(x => x.conf);
+  const NEG_SEM = porSemana.map(x => x.neg);
+  const INV_SEM = porSemana.map(x => x.inv);
+  const TXPOS = porSemana.map(x => pct(x.conf, x.conf+x.neg));
+
+  const FAIXA_L=['<5a','5-9a','10-19a','20-29a','30-39a','40-49a','50-59a','≥60a'];
+  const idadeCont = Object.fromEntries(FAIXA_L.map(x => [x,0]));
+  dados.forEach(r => {
+    const f = faixaEtaria(idadeEmAnos(r.NU_IDADE_N));
+    if(f) idadeCont[f]++;
+  });
+  const FAIXA_V=FAIXA_L.map(x => idadeCont[x]);
+
+  const racaMap={'1':'Branca','2':'Preta','3':'Amarela','4':'Parda','5':'Indígena','9':'Ignorado'};
+  const racaCont={};
+  dados.forEach(r => {
+    const rotulo = racaMap[valor(r.CS_RACA)] || 'Sem informação';
+    racaCont[rotulo]=(racaCont[rotulo]||0)+1;
+  });
+  const ordemRaca=['Parda','Ignorado','Branca','Preta','Amarela','Indígena','Sem informação'];
+  const RACA_L=ordemRaca.filter(x => racaCont[x]);
+  const RACA_V=RACA_L.map(x => racaCont[x]);
+
+  const sintomas=[
+    ['FEBRE','Febre'],['MIALGIA','Mialgia'],['CEFALEIA','Cefaleia'],['ARTRALGIA','Artralgia'],
+    ['NAUSEA','Náusea'],['DOR_RETRO','Dor retro-orbitária'],['VOMITO','Vômito'],
+    ['EXANTEMA','Exantema'],['ARTRITE','Artrite'],['CONJUNTVIT','Conjuntivite']
+  ];
+  const SINAIS_L=sintomas.map(x => x[1]);
+  const SINAIS_V=sintomas.map(([campo]) => 100*dados.filter(r => valor(r[campo]) === '1').length/dados.length);
+
+  const N_FEM=dados.filter(r => valor(r.CS_SEXO)==='F').length;
+  const N_MAS=dados.filter(r => valor(r.CS_SEXO)==='M').length;
+  const N_OUTRO=dados.length-N_FEM-N_MAS;
+
+  const muniMap=new Map();
+  dados.forEach(r => {
+    const nome=nomeMunicipio(r);
+    if(!muniMap.has(nome)) muniMap.set(nome,{nome,total:0,conf:0,inv:0,neg:0,curva_conf:Array(maxSE).fill(0),curva_inv:Array(maxSE).fill(0)});
+    const m=muniMap.get(nome);
+    m.total++;
+    const c=valor(r.CLASSI_FIN), se=numero(r.SE);
+    if(c==='13'){
+      m.conf++;
+      if(se!==null && se>=1 && se<=maxSE) m.curva_conf[se-1]++;
+    }else if(c==='5') m.neg++;
+    else{
+      m.inv++;
+      if(se!==null && se>=1 && se<=maxSE) m.curva_inv[se-1]++;
+    }
+  });
+  MUNIS=[...muniMap.values()].map(m => {
+    const denominador=m.conf+m.neg;
+    m.tx_pos=pct(m.conf,denominador);
+    const pop=populacoes.get(m.nome);
+    m.inc=pop ? 100000*m.conf/pop : null;
+    return m;
+  }).sort((a,b) => b.total-a.total || a.nome.localeCompare(b.nome,'pt-BR'));
+
+  const datasDigitacao=dados.map(r => valor(r.DT_DIGITA)).filter(Boolean).sort();
+  const ultimaDigitacao=datasDigitacao.at(-1) || null;
+
+  return {ano,maxSE,dados,conf,neg,inv,encerrados,txPos,hosp,obitos,CONF_SEM,NEG_SEM,INV_SEM,TXPOS,FAIXA_L,FAIXA_V,RACA_L,RACA_V,SINAIS_L,SINAIS_V,N_FEM,N_MAS,N_OUTRO,ultimaDigitacao};
+}
+
+function atualizarTexto(a){
+  const periodo=`SE 01–${String(a.maxSE).padStart(2,'0')}/${a.ano}`;
+  document.title=`Chikungunya RIDE-DF ${a.ano} · SE ${String(a.maxSE).padStart(2,'0')} · Sala de Situação`;
+  document.getElementById('tituloPrincipal').innerHTML=`Chikungunya — <span>RIDE-DF</span> &nbsp;·&nbsp; ${a.ano} &nbsp;·&nbsp; SE 01–${String(a.maxSE).padStart(2,'0')}`;
+  document.getElementById('tituloIndicadores').textContent=`Indicadores gerais — ${periodo}`;
+
+  document.getElementById('miniTotal').textContent=fmtInt(a.dados.length);
+  document.getElementById('miniConf').textContent=fmtInt(a.conf.length);
+  document.getElementById('miniTx').textContent=fmtPct(a.txPos);
+  document.getElementById('miniInv').textContent=fmtInt(a.inv.length);
+
+  document.getElementById('kpiConf').textContent=fmtInt(a.conf.length);
+  document.getElementById('kpiConfSub').textContent=`de ${fmtInt(a.encerrados)} encerrados`;
+  document.getElementById('kpiInv').textContent=fmtInt(a.inv.length);
+  document.getElementById('kpiTx').textContent=fmtPct(a.txPos);
+  document.getElementById('kpiObito').textContent=fmtInt(a.obitos);
+  document.getElementById('kpiHospSub').textContent=`Hospitaliz.: ${fmtInt(a.hosp)} (${fmtPct(pct(a.hosp,a.dados.length))})`;
+
+  const baixos=MUNIS.filter(m => m.tx_pos!==null && m.tx_pos<25).map(m => `<strong>${escapeHtml(m.nome)}</strong>`);
+  const alerta=document.getElementById('alertaBaixaPos');
+  if(baixos.length){
+    alerta.style.display='flex';
+    alerta.innerHTML=`&#9888; Baixa taxa de positividade (&lt;25%): ${baixos.join(', ')} — investigar diagnóstico diferencial com outras arboviroses.`;
+  }else{
+    alerta.style.display='none';
+  }
+
+  const agora=new Date().toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'});
+  const snapshot=a.ultimaDigitacao ? ` · Última digitação no CSV: ${a.ultimaDigitacao.split('-').reverse().join('/')}` : '';
+  document.getElementById('fonteRodape').textContent=`¹ Incidência calculada sobre confirmados · Populações: estimativa IBGE 2024 · Fonte: SINAN Online · RIDE-DF: LC 94/1998 + LC 163/2018 · Dados carregados em: ${agora}${snapshot}`;
+}
+
+function criarGraficos(a){
+  charts.push(new Chart(document.getElementById('ch_classi'),{type:'doughnut',
+    data:{labels:['Confirmado','Em investigação','Notif. negativa'],datasets:[{data:[a.conf.length,a.inv.length,a.neg.length],backgroundColor:[AZUL,DOURADO,GRAY],borderWidth:2,borderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{display:true,position:'right',labels:{color:tp,font:{size:11,family:'Lato',weight:'700'},boxWidth:12}},tooltip:{callbacks:{label:c=>` ${c.label}: ${c.raw}`}}}}
+  }));
+
+  charts.push(new Chart(document.getElementById('ch_idade'),{type:'bar',
+    data:{labels:a.FAIXA_L,datasets:[{data:a.FAIXA_V,backgroundColor:AZUL,borderRadius:3,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.raw} casos`}}},scales:{x:{ticks:{color:tc,font:{size:10}},grid:{display:false},border:{color:gc}},y:{ticks:{color:tc,font:{size:10}},grid:{color:gc},border:{display:false}}}}
+  }));
+
+  charts.push(new Chart(document.getElementById('ch_curva'),{type:'bar',
+    data:{labels:SEMS,datasets:[
+      {type:'bar',label:'Confirmados',data:a.CONF_SEM,backgroundColor:AZUL,stack:'s',borderRadius:0,borderSkipped:false,yAxisID:'y'},
+      {type:'bar',label:'Notificações negativas',data:a.NEG_SEM,backgroundColor:GRAY,stack:'s',borderRadius:0,borderSkipped:false,yAxisID:'y'},
+      {type:'line',label:'Taxa de positividade (%)',data:a.TXPOS,borderColor:DOURADO,backgroundColor:'rgba(186,147,23,.08)',borderWidth:2.5,pointRadius:4,pointBackgroundColor:DOURADO,tension:.3,yAxisID:'y2',fill:false,spanGaps:true}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,callbacks:{label:c=>c.dataset.label==='Taxa de positividade (%)'?` Tx positividade: ${c.raw!==null?c.raw.toFixed(1)+'%':'—'}`:` ${c.dataset.label}: ${c.raw}`}}},scales:{x:{stacked:true,ticks:{color:tc,font:{size:10},autoSkip:SEMS.length>30,maxRotation:45},grid:{display:false},border:{color:gc}},y:{stacked:true,ticks:{color:tc,font:{size:10}},grid:{color:gc},border:{display:false},title:{display:true,text:'Casos',color:tc,font:{size:10}}},y2:{position:'right',min:0,max:100,ticks:{color:DOURADO,font:{size:10},callback:v=>v+'%'},grid:{display:false},border:{display:false},title:{display:true,text:'Tx positividade',color:DOURADO,font:{size:10}}}}}
+  }));
+
+  const muniTx=MUNIS.filter(m=>m.tx_pos!==null).sort((a,b)=>b.tx_pos-a.tx_pos);
+  charts.push(new Chart(document.getElementById('ch_txpos'),{type:'bar',
+    data:{labels:muniTx.map(m=>m.nome),datasets:[{data:muniTx.map(m=>m.tx_pos),backgroundColor:muniTx.map(m=>txColor(m.tx_pos)),borderRadius:3,borderSkipped:false}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.raw.toFixed(1)}%`}}},scales:{x:{min:0,max:100,ticks:{color:tc,font:{size:10},callback:v=>v+'%'},grid:{color:gc},border:{display:false}},y:{ticks:{color:tp,font:{size:10}},grid:{display:false},border:{color:gc}}}}
+  }));
+
+  const muniInc=MUNIS.filter(m=>m.inc!==null).sort((a,b)=>b.inc-a.inc);
+  charts.push(new Chart(document.getElementById('ch_inc'),{type:'bar',
+    data:{labels:muniInc.map(m=>m.nome),datasets:[{data:muniInc.map(m=>m.inc),backgroundColor:muniInc.map(m=>txColor(m.tx_pos)),borderRadius:3,borderSkipped:false}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.raw.toFixed(1)}/100k`}}},scales:{x:{ticks:{color:tc,font:{size:10},callback:v=>v+'/100k'},grid:{color:gc},border:{display:false}},y:{ticks:{color:tp,font:{size:10}},grid:{display:false},border:{color:gc}}}}
+  }));
+
+  const muniGrid=document.getElementById('muniGrid');
+  muniGrid.innerHTML='';
+  MUNIS.slice(0,6).forEach((m,i)=>{
+    const div=document.createElement('div'); div.className='muni-card'; const cid='mc'+i;
+    const txStr=m.tx_pos!==null?`Tx pos: ${m.tx_pos.toFixed(1)}%`:'Sem casos encerrados';
+    div.innerHTML=`<h3>${escapeHtml(m.nome)}</h3><div class="meta">${fmtInt(m.total)} notif. · ${fmtInt(m.conf)} conf. · ${txStr}</div><div class="chart-h"><canvas id="${cid}"></canvas></div>`;
+    muniGrid.appendChild(div);
+    charts.push(new Chart(document.getElementById(cid),{type:'bar',
+      data:{labels:SEMS,datasets:[{label:'Confirmados',data:m.curva_conf,backgroundColor:AZUL,stack:'s',borderRadius:0,borderSkipped:false},{label:'Em investigação',data:m.curva_inv,backgroundColor:DOURADO,stack:'s',borderRadius:0,borderSkipped:false}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,callbacks:{label:c=>` ${c.dataset.label}: ${c.raw}`}}},scales:{x:{stacked:true,ticks:{color:tc,font:{size:8},autoSkip:true,maxRotation:0},grid:{display:false},border:{color:gc}},y:{stacked:true,ticks:{color:tc,font:{size:8}},grid:{color:gc},border:{display:false}}}}
+    }));
+  });
+
+  const pieOpts={responsive:true,maintainAspectRatio:false,cutout:'55%',plugins:{legend:{display:true,position:'bottom',labels:{color:tp,font:{size:10,family:'Lato'},boxWidth:10}},tooltip:{callbacks:{label:c=>` ${c.label}: ${c.raw}`}}}};
+  charts.push(new Chart(document.getElementById('ch_sinais'),{type:'bar',
+    data:{labels:a.SINAIS_L,datasets:[{data:a.SINAIS_V,backgroundColor:AZUL,borderRadius:3,borderSkipped:false}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.raw.toFixed(1)}%`}}},scales:{x:{max:100,ticks:{color:tc,font:{size:9},callback:v=>v+'%'},grid:{color:gc},border:{display:false}},y:{ticks:{color:tp,font:{size:10}},grid:{display:false},border:{color:gc}}}}
+  }));
+
+  const sexoLabels=['Feminino','Masculino'], sexoValores=[a.N_FEM,a.N_MAS], sexoCores=[AZUL,DOURADO];
+  if(a.N_OUTRO>0){sexoLabels.push('Sem informação');sexoValores.push(a.N_OUTRO);sexoCores.push(GRAY);}
+  charts.push(new Chart(document.getElementById('ch_sexo'),{type:'doughnut',data:{labels:sexoLabels,datasets:[{data:sexoValores,backgroundColor:sexoCores,borderWidth:2,borderColor:'#fff'}]},options:pieOpts}));
+  charts.push(new Chart(document.getElementById('ch_raca'),{type:'doughnut',data:{labels:a.RACA_L,datasets:[{data:a.RACA_V,backgroundColor:[AZUL,GRAY,GREEN,DOURADO,'#6b5b9e',RED,'#8b8b83'].slice(0,a.RACA_L.length),borderWidth:2,borderColor:'#fff'}]},options:pieOpts}));
+}
+
+function preencherTabela(){
+  const tbody=document.getElementById('tblBody');
+  tbody.innerHTML='';
+  MUNIS.forEach(m=>{
+    const txStr=fmtPct(m.tx_pos), incStr=m.inc!==null?m.inc.toFixed(1):'—';
+    let txCls='b-gray'; if(m.tx_pos!==null){if(m.tx_pos>=75)txCls='b-azul';else if(m.tx_pos>=50)txCls='b-green';else if(m.tx_pos>=25)txCls='b-gold';else txCls='b-red';}
+    tbody.insertAdjacentHTML('beforeend',`<tr><td><strong>${escapeHtml(m.nome)}</strong></td><td>${fmtInt(m.total)}</td><td><span class="badge b-azul">${fmtInt(m.conf)}</span></td><td><span class="badge b-gold">${fmtInt(m.inv)}</span></td><td>${fmtInt(m.neg)}</td><td><span class="badge ${txCls}">${txStr}</span></td><td>${incStr}</td></tr>`);
+  });
+}
+
+const TOTAL=6; let cur=0, paused=false, animFrame=null;
+const pbar=document.getElementById('pbar'), pauseBtn=document.getElementById('pauseBtn'), counter=document.getElementById('slideCounter'), dotsEl=document.getElementById('dots');
+function prepararNavegacao(){
+  dotsEl.innerHTML='';
+  for(let i=0;i<TOTAL;i++){const b=document.createElement('button');b.className='dot-btn'+(i===0?' on':'');b.onclick=()=>goTo(i);b.setAttribute('aria-label','Slide '+(i+1));dotsEl.appendChild(b);}
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key==='ArrowDown')next();if(e.key==='ArrowLeft'||e.key==='ArrowUp')prev();if(e.key===' '){e.preventDefault();togglePause();}});
+  startTimer();
+}
 function showSlide(n){document.querySelectorAll('.slide').forEach((s,i)=>s.classList.toggle('active',i===n));document.querySelectorAll('.dot-btn').forEach((d,i)=>d.classList.toggle('on',i===n));counter.textContent=(n+1)+' / '+TOTAL;cur=n;}
 function startTimer(){const start=performance.now();function tick(now){if(paused)return;const e=now-start;pbar.style.width=(e/INTERVAL*100)+'%';if(e>=INTERVAL){next();return;}animFrame=requestAnimationFrame(tick);}cancelAnimationFrame(animFrame);pbar.style.transition='none';pbar.style.width='0%';requestAnimationFrame(()=>{pbar.style.transition=`width ${INTERVAL/1000}s linear`;animFrame=requestAnimationFrame(tick);});}
 function next(){cur=(cur+1)%TOTAL;showSlide(cur);startTimer();}
 function prev(){cur=(cur-1+TOTAL)%TOTAL;showSlide(cur);startTimer();}
 function goTo(n){showSlide(n);startTimer();}
 function togglePause(){paused=!paused;pauseBtn.textContent=paused?'▶ Retomar':'❚❚ Pausar';if(!paused)startTimer();else cancelAnimationFrame(animFrame);}
-document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key==='ArrowDown')next();if(e.key==='ArrowLeft'||e.key==='ArrowUp')prev();if(e.key===' '){e.preventDefault();togglePause();}});
-startTimer();
+
+function mostrarErro(erro){
+  console.error(erro);
+  const loading=document.getElementById('loading');
+  loading.classList.add('erro');
+  document.getElementById('loadingTitulo').textContent='Não foi possível atualizar o painel';
+  document.getElementById('loadingMsg').textContent=`${erro.message}. Verifique se o arquivo dados/chikungunya_ride.csv está público no GitHub e recarregue a página.`;
+}
+
+async function iniciar(){
+  try{
+    const [textoDados,textoPop]=await Promise.all([baixarTexto(CONFIG.csvDados),baixarTexto(CONFIG.csvPopulacao)]);
+    const rows=parseCsv(textoDados,'chikungunya_ride.csv');
+    const popRows=parseCsv(textoPop,'populacao_ride.csv');
+    const a=agregar(rows,criarPopulacoes(popRows));
+    atualizarTexto(a);
+    criarGraficos(a);
+    preencherTabela();
+    prepararNavegacao();
+    document.getElementById('loading').classList.add('oculto');
+  }catch(erro){
+    mostrarErro(erro);
+  }
+}
+
+iniciar();
+
 </script>
 </body>
 </html>
