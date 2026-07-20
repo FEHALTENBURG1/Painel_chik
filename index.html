@@ -54,7 +54,13 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 .muni-card h3{font-size:12px;font-weight:700;color:var(--azul);flex-shrink:0}
 .muni-card .meta{font-size:10px;color:var(--muted);flex-shrink:0}
 .muni-card .chart-h{flex:1;position:relative;min-height:0}
-.alert{background:#fdf8e8;border:1px solid var(--dourado);border-radius:var(--radius);padding:9px 14px;font-size:12px;color:#7a5c00;display:flex;gap:8px;align-items:flex-start;flex-shrink:0}
+.alertas-wrap{display:grid;grid-template-columns:1fr 1fr;gap:8px;flex-shrink:0}
+.alert{border-radius:var(--radius);padding:9px 14px;font-size:11.5px;display:flex;gap:8px;align-items:flex-start;line-height:1.35;min-height:48px}
+.alert strong{font-weight:900}
+.alert-danger{background:#fff0f0;border:1px solid rgba(184,50,50,.42);color:#8e2020}
+.alert-warning{background:#fdf8e8;border:1px solid var(--dourado);color:#705400}
+.alert-ok{background:#edf7f1;border:1px solid rgba(46,125,79,.35);color:#24643f}
+@media(max-width:900px){.alertas-wrap{grid-template-columns:1fr}}
 .tbl-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);flex:1;overflow:auto;min-height:0;box-shadow:var(--shadow)}
 table{width:100%;border-collapse:collapse;font-size:12px}
 th{padding:8px 12px;font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;border-bottom:2px solid var(--border-strong);text-align:left;position:sticky;top:0;background:var(--surface2)}
@@ -126,7 +132,7 @@ tr:last-child td{border:none}tr:hover td{background:var(--surface2)}
 </div>
 
 <div class="slide" id="s1">
-  <div class="slide-title">Curva epidemiológica por início dos sintomas (SEM_PRI) e taxa de positividade semanal</div>
+  <div class="slide-title">Curva epidemiológica por semana de início dos sintomas (SEM_PRI) e taxa de positividade semanal</div>
   <div class="leg">
     <span><span class="ldot" style="background:#26346c"></span>Confirmados</span>
     <span><span class="ldot" style="background:#c3c2b7"></span>Notificações negativas</span>
@@ -144,7 +150,7 @@ tr:last-child td{border:none}tr:hover td{background:var(--surface2)}
 </div>
 
 <div class="slide" id="s3">
-  <div class="slide-title">Curvas por município de residência — confirmados e em investigação (SEM_PRI)</div>
+  <div class="slide-title">Curvas por município de residência — semana de início dos sintomas (SEM_PRI)</div>
   <div class="leg">
     <span><span class="ldot" style="background:#26346c"></span>Confirmados</span>
     <span><span class="ldot" style="background:#ba9317"></span>Em investigação</span>
@@ -162,11 +168,14 @@ tr:last-child td{border:none}tr:hover td{background:var(--surface2)}
 </div>
 
 <div class="slide" id="s5">
-  <div class="slide-title">Tabela resumo por município — classificação, taxa de positividade e incidência</div>
-  <div class="alert" id="alertaBaixaPos"></div>
+  <div class="slide-title">Alertas de vigilância e tabela municipal — positividade e realização de RT-PCR</div>
+  <div class="alertas-wrap">
+    <div class="alert alert-danger" id="alertaAltaPos"></div>
+    <div class="alert alert-warning" id="alertaSemPcr"></div>
+  </div>
   <div class="tbl-wrap">
     <table>
-      <thead><tr><th>Município</th><th>Total</th><th>Confirmados</th><th>Em investigação</th><th>Notif. negativas</th><th>Tx positividade</th><th>Incidência /100k¹</th></tr></thead>
+      <thead><tr><th>Município</th><th>Total</th><th>Confirmados</th><th>Em investigação</th><th>Notif. negativas</th><th>Tx positividade</th><th>RT-PCR realizados</th><th>Cobertura RT-PCR</th><th>Incidência /100k¹</th></tr></thead>
       <tbody id="tblBody"></tbody>
     </table>
   </div>
@@ -188,7 +197,11 @@ const CONFIG = {
   anoPreferencial: String(new Date().getFullYear()),
   csvDados: 'https://raw.githubusercontent.com/FEHALTENBURG1/dados_chikungunya/refs/heads/main/dados/chikungunya_ride.csv',
   csvPopulacao: 'https://raw.githubusercontent.com/FEHALTENBURG1/dados_chikungunya/refs/heads/main/populacao_ride.csv',
-  intervaloSlides: 15000
+  intervaloSlides: 15000,
+  // Critérios dos alertas. Podem ser alterados sem mexer no restante do painel.
+  limiarAltaPositividade: 75,
+  minEncerradosAltaPositividade: 5,
+  minNotificacoesSemPcr: 1
 };
 
 const AZUL='#26346c', DOURADO='#ba9317', GREEN='#2e7d4f', RED='#b83232', GRAY='#c3c2b7';
@@ -251,6 +264,22 @@ function obterAno(rows){
   return anos[anos.length - 1];
 }
 
+// Semana epidemiológica do início dos sintomas.
+// No SINAN, SEM_PRI vem no formato AAAASS (ex.: 202627).
+// A coluna SE do CSV é mantida somente como alternativa, pois foi derivada de SEM_PRI.
+function semanaInicioSintomas(row, ano){
+  const semPri = valor(row.SEM_PRI).replace(/\.0$/, '');
+  if(/^\d{6}$/.test(semPri)){
+    const anoSem = semPri.slice(0,4);
+    const semana = Number(semPri.slice(4,6));
+    if(anoSem === String(ano) && semana >= 1 && semana <= 53) return semana;
+  }
+
+  const seDerivada = numero(row.SE);
+  if(seDerivada !== null && seDerivada >= 1 && seDerivada <= 53) return seDerivada;
+  return null;
+}
+
 function idadeEmAnos(codigo){
   const s = valor(codigo).replace(/\.0$/, '').padStart(4, '0');
   if(!/^\d{4}$/.test(s)) return null;
@@ -295,7 +324,7 @@ function agregar(rows, populacoes){
   const dados = rows.filter(r => valor(r.ANO_EPI) === ano);
   if(!dados.length) throw new Error(`Não há registros para ${ano}.`);
 
-  const semanasValidas = dados.map(r => numero(r.SE)).filter(s => s !== null && s >= 1 && s <= 53);
+  const semanasValidas = dados.map(r => semanaInicioSintomas(r, ano)).filter(s => s !== null);
   const maxSE = Math.max(...semanasValidas);
   SEMS = Array.from({length:maxSE}, (_,i) => `SE${String(i+1).padStart(2,'0')}`);
 
@@ -309,7 +338,7 @@ function agregar(rows, populacoes){
 
   const porSemana = Array.from({length:maxSE}, () => ({conf:0,neg:0,inv:0}));
   dados.forEach(r => {
-    const se = numero(r.SE);
+    const se = semanaInicioSintomas(r, ano);
     if(se === null || se < 1 || se > maxSE) return;
     const c = valor(r.CLASSI_FIN);
     if(c === '13') porSemana[se-1].conf++;
@@ -354,10 +383,18 @@ function agregar(rows, populacoes){
   const muniMap=new Map();
   dados.forEach(r => {
     const nome=nomeMunicipio(r);
-    if(!muniMap.has(nome)) muniMap.set(nome,{nome,total:0,conf:0,inv:0,neg:0,curva_conf:Array(maxSE).fill(0),curva_inv:Array(maxSE).fill(0)});
+    if(!muniMap.has(nome)) muniMap.set(nome,{nome,total:0,conf:0,inv:0,neg:0,pcr_realizados:0,pcr_nao_realizados:0,pcr_sem_info:0,curva_conf:Array(maxSE).fill(0),curva_inv:Array(maxSE).fill(0)});
     const m=muniMap.get(nome);
     m.total++;
-    const c=valor(r.CLASSI_FIN), se=numero(r.SE);
+
+    // RESUL_PCR_: 1=reagente, 2=não reagente, 3=inconclusivo, 4=não realizado.
+    // Códigos 1–3 são contabilizados como RT-PCR efetivamente realizado.
+    const pcr=valor(r.RESUL_PCR_);
+    if(['1','2','3'].includes(pcr)) m.pcr_realizados++;
+    else if(pcr==='4') m.pcr_nao_realizados++;
+    else m.pcr_sem_info++;
+
+    const c=valor(r.CLASSI_FIN), se=semanaInicioSintomas(r, ano);
     if(c==='13'){
       m.conf++;
       if(se!==null && se>=1 && se<=maxSE) m.curva_conf[se-1]++;
@@ -370,6 +407,8 @@ function agregar(rows, populacoes){
   MUNIS=[...muniMap.values()].map(m => {
     const denominador=m.conf+m.neg;
     m.tx_pos=pct(m.conf,denominador);
+    m.encerrados=denominador;
+    m.cob_pcr=pct(m.pcr_realizados,m.total);
     const pop=populacoes.get(m.nome);
     m.inc=pop ? 100000*m.conf/pop : null;
     return m;
@@ -399,13 +438,37 @@ function atualizarTexto(a){
   document.getElementById('kpiObito').textContent=fmtInt(a.obitos);
   document.getElementById('kpiHospSub').textContent=`Hospitaliz.: ${fmtInt(a.hosp)} (${fmtPct(pct(a.hosp,a.dados.length))})`;
 
-  const baixos=MUNIS.filter(m => m.tx_pos!==null && m.tx_pos<25).map(m => `<strong>${escapeHtml(m.nome)}</strong>`);
-  const alerta=document.getElementById('alertaBaixaPos');
-  if(baixos.length){
-    alerta.style.display='flex';
-    alerta.innerHTML=`&#9888; Baixa taxa de positividade (&lt;25%): ${baixos.join(', ')} — investigar diagnóstico diferencial com outras arboviroses.`;
+  const municipiosValidos=MUNIS.filter(m => m.nome!=='Residência ignorada');
+
+  const altaPos=municipiosValidos
+    .filter(m => m.tx_pos!==null && m.tx_pos>=CONFIG.limiarAltaPositividade && m.encerrados>=CONFIG.minEncerradosAltaPositividade)
+    .sort((a,b)=>b.tx_pos-a.tx_pos || b.encerrados-a.encerrados);
+  const semPcr=municipiosValidos
+    .filter(m => m.total>=CONFIG.minNotificacoesSemPcr && m.pcr_realizados===0)
+    .sort((a,b)=>b.total-a.total || a.nome.localeCompare(b.nome,'pt-BR'));
+  const nomesSemPcr=new Set(semPcr.map(m=>m.nome));
+
+  const alertaAlta=document.getElementById('alertaAltaPos');
+  if(altaPos.length){
+    const itens=altaPos.map(m => {
+      const critico=nomesSemPcr.has(m.nome) ? ' <strong>— também sem RT-PCR</strong>' : '';
+      return `<strong>${escapeHtml(m.nome)}</strong> (${m.tx_pos.toFixed(1)}%; ${fmtInt(m.encerrados)} encerrados)${critico}`;
+    });
+    alertaAlta.className='alert alert-danger';
+    alertaAlta.innerHTML=`&#9888; <span><strong>Alta positividade (≥${CONFIG.limiarAltaPositividade}%):</strong> ${itens.join('; ')}.</span>`;
   }else{
-    alerta.style.display='none';
+    alertaAlta.className='alert alert-ok';
+    alertaAlta.innerHTML=`&#10003; <span>Nenhum município atingiu o critério de alta positividade (≥${CONFIG.limiarAltaPositividade}%, mínimo de ${CONFIG.minEncerradosAltaPositividade} casos encerrados).</span>`;
+  }
+
+  const alertaPcr=document.getElementById('alertaSemPcr');
+  if(semPcr.length){
+    const itens=semPcr.map(m => `<strong>${escapeHtml(m.nome)}</strong> (0/${fmtInt(m.total)})`);
+    alertaPcr.className='alert alert-warning';
+    alertaPcr.innerHTML=`&#9888; <span><strong>Sem RT-PCR realizado:</strong> ${itens.join('; ')}. Considerados realizados os resultados 1, 2 ou 3 em RESUL_PCR_.</span>`;
+  }else{
+    alertaPcr.className='alert alert-ok';
+    alertaPcr.innerHTML='&#10003; <span>Todos os municípios com notificações possuem ao menos um RT-PCR realizado.</span>';
   }
 
   const agora=new Date().toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'});
@@ -474,9 +537,10 @@ function preencherTabela(){
   const tbody=document.getElementById('tblBody');
   tbody.innerHTML='';
   MUNIS.forEach(m=>{
-    const txStr=fmtPct(m.tx_pos), incStr=m.inc!==null?m.inc.toFixed(1):'—';
-    let txCls='b-gray'; if(m.tx_pos!==null){if(m.tx_pos>=75)txCls='b-azul';else if(m.tx_pos>=50)txCls='b-green';else if(m.tx_pos>=25)txCls='b-gold';else txCls='b-red';}
-    tbody.insertAdjacentHTML('beforeend',`<tr><td><strong>${escapeHtml(m.nome)}</strong></td><td>${fmtInt(m.total)}</td><td><span class="badge b-azul">${fmtInt(m.conf)}</span></td><td><span class="badge b-gold">${fmtInt(m.inv)}</span></td><td>${fmtInt(m.neg)}</td><td><span class="badge ${txCls}">${txStr}</span></td><td>${incStr}</td></tr>`);
+    const txStr=fmtPct(m.tx_pos), incStr=m.inc!==null?m.inc.toFixed(1):'—', pcrStr=fmtPct(m.cob_pcr);
+    let txCls='b-gray'; if(m.tx_pos!==null){if(m.tx_pos>=CONFIG.limiarAltaPositividade)txCls='b-red';else if(m.tx_pos>=50)txCls='b-gold';else txCls='b-green';}
+    const pcrCls=m.pcr_realizados===0?'b-red':(m.cob_pcr<25?'b-gold':'b-green');
+    tbody.insertAdjacentHTML('beforeend',`<tr><td><strong>${escapeHtml(m.nome)}</strong></td><td>${fmtInt(m.total)}</td><td><span class="badge b-azul">${fmtInt(m.conf)}</span></td><td><span class="badge b-gold">${fmtInt(m.inv)}</span></td><td>${fmtInt(m.neg)}</td><td><span class="badge ${txCls}">${txStr}</span></td><td><span class="badge ${pcrCls}">${fmtInt(m.pcr_realizados)}</span></td><td><span class="badge ${pcrCls}">${pcrStr}</span></td><td>${incStr}</td></tr>`);
   });
 }
 
